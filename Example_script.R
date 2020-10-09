@@ -1,7 +1,8 @@
+
+#### Load the programs
 source("CDSCR_programs.R")
 
-
-ex_data <- read.csv("CDSCR_data3.csv")
+ex_data <- read.csv("CDSCR_data.csv")
 
 #### Extracting data
 # Total current duration time
