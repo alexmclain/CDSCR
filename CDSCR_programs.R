@@ -7,7 +7,7 @@ require(survival)
 
 #### Wrapper to the optimization of the likelihood ####
 
-CDSCR <- function(T,TTFT,fail_ind,knots_T,knots_Y,knots_Z,K1,K2,K3,B=20,theta=NULL,pl=FALSE,opt_meth="Nelder-Mead"){
+CDSCR <- function(T,TTFT,fail_ind,knots_T,knots_Y,knots_Z,K1,K2,K3,B=20,theta=NULL,opt_meth="Nelder-Mead"){
   
   ##################################################################################################
   #Description: This program will run a current duration semi-competeing risk model with a  
@@ -74,10 +74,10 @@ CDSCR <- function(T,TTFT,fail_ind,knots_T,knots_Y,knots_Z,K1,K2,K3,B=20,theta=NU
   naive.z   <- hazard_guess(T[fail_ind==1]-TTFT[fail_ind==1],knots_Z)
   naive.z[length(naive.z)] <- 0.2
   naive.y   <- hazard_guess_ecdf(ecdf(TTFT[fail_ind==1]),TTFT[fail_ind==1],knots_Y)
-  naive.y   <- exp(log(naive.y)/0.8)
+  naive.y   <- naive.y^(1.5)
   
   naive.yx  <- hazard_guess_ecdf(ecdf(TTFT[fail_ind==1]),TTFT[fail_ind==1],knots_T)
-  naive.yx   <- exp(log(naive.yx)/0.8)
+  naive.yx   <- naive.yx^(1.5)
   naive.x <- naive_est - naive.yx
   
   ## Setting minimum value for starting values
@@ -94,16 +94,6 @@ CDSCR <- function(T,TTFT,fail_ind,knots_T,knots_Y,knots_Z,K1,K2,K3,B=20,theta=NU
   if(is.null(theta)){
     corrxy.T <- 0.1/(1-0.1)
     corrxz.T <- 0.1/(1-0.1)
-  }
-  if(pl){
-    t_vec <- seq(0,36,1)
-    t_Surv_X <- PC_surv(t_vec,knots_T,naive.x)
-    t_Surv_Y <- PC_surv(t_vec,knots_Y,naive.y)
-    t_Surv_Z <- PC_surv(t_vec,knots_Z,naive.z)
-    
-    plot(t_vec,t_Surv_X,col=1,lwd=2,lty=1,type="l",ylab="Starting Survival Probability",xlab="Time",ylim=c(0,1))
-    lines(t_vec,t_Surv_Y,col=2,lwd=2,lty=1)
-    lines(t_vec,t_Surv_Z,col=3,lwd=2,lty=1)
   }
   
   par<-  log(c(naive.x,naive.y,naive.z,corrxy.T,corrxz.T))
@@ -374,9 +364,10 @@ likelihood.function.cdscr <-function(par,T,TTF,fail_ind,knots_T,knots_Y,knots_Z,
       Sigma[1,3] <- Sigma[3,1] <- corrxz
       Sigma[2,3] <- Sigma[3,2] <- corrxy*corrxz
       u <- mvrnorm(n=1e7, mu=c(0,0,0), Sigma=Sigma)
+      T_vals <- gen_func(pnorm(u[,2]),knots_T,alpha_T)
       Y_vals <- gen_func(pnorm(u[,2]),knots_Y,alpha_Y)
       Z_vals <- gen_func(pnorm(u[,3]),knots_Z,alpha_Z)
-      EZgiven <- mean(Z_vals*I(Y_vals<X_vals))
+      EZgiven <- mean(Z_vals*I(Y_vals<T_vals))
     }
     denominator <- Inf
     if(is.finite(ETminY) & is.finite(EZgiven)){denominator <- ETminY + EZgiven}

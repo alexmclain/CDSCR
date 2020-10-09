@@ -8,7 +8,7 @@ ex_data <- read.csv("CDSCR_data.csv")
 # Total current duration time
 T <- ex_data$T 
 # Time to fertility treatment (can be set to zero if fertility treatment did not occur)
-TTFT <- ex_data$TTFT 
+TTFT <- ex_data$TTF 
 # Indicator that fertility treatment occured.
 fail_ind <- ex_data$fail_ind 
 
@@ -18,7 +18,7 @@ K2 <- 8
 K3 <- 8
 
 #### Run Maximum Likelihood Optimization
-CDSCR_opt <- CDSCR(T,TTFT,fail_ind,knots_T=NULL,knots_Y=NULL,knots_Z=NULL,K1=K1,K2=K2,K3=K2,B=20,theta=NULL,pl=TRUE)
+CDSCR_opt <- CDSCR(T,TTFT,fail_ind,knots_T=NULL,knots_Y=NULL,knots_Z=NULL,K1=K1,K2=K2,K3=K2,B=20,theta=NULL,opt_meth = "BFGS")
 
 ### Extract knots
 knots_T <- CDSCR_opt$knots$knots_T  
