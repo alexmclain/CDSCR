@@ -42,17 +42,26 @@ CDSCR <- function(x.data,y.data,delta.data,knots.t=NULL,knots.y=NULL,knots.z=NUL
   y.data[delta.data==0] <- 0
   z.data <- x.data-y.data
   z.data[delta.data==0] <- 0
-
+  
   ## Selecting knot locations (if not given). 
-  if(is.null(knots.t)){knots.t <- quantile(x.data,probs = c(1:(K1-1))/K1)}
-  if(is.null(knots.y)){knots.y <- quantile(y.data[y.data>0],probs = c(1:(K2-1))/K2)}
-  if(is.null(knots.z)){knots.z <- quantile(z.data[z.data>0],probs = c(1:(K3-1))/K3)}
+  if(is.null(knots.t)){
+    knots.t <- quantile(x.data,probs = c(1:(K1-1))/K1)
+    knots.t <- knots.t[knots.t>0]
+    }
+  if(is.null(knots.y)){
+    knots.y <- quantile(y.data[y.data>0],probs = c(1:(K2-1))/K2)
+    knots.y <- knots.y[knots.y>0]
+    }
+  if(is.null(knots.z)){
+    knots.z <- quantile(z.data[z.data>0],probs = c(1:(K3-1))/K3)
+    knots.z <- knots.z[knots.z>0]
+  }
   
   ## Getting the nodes and weights for Legendre quadrature
   out <- gauss.quad(B,"legendre")
   nodes <- out$nodes
   weights <- out$weights
-
+  
   ## Getting starting values for parameters.
   naive_est <- hazard_guess(x.data[z.data==0],knots.t) 
   naive.z   <- hazard_guess(z.data[z.data>0],knots.z)
@@ -67,7 +76,7 @@ CDSCR <- function(x.data,y.data,delta.data,knots.t=NULL,knots.y=NULL,knots.z=NUL
   naive_est_x[naive_est_x<exp(-3) | is.nan(naive_est_x) | is.na(naive_est_x)] <- exp(-3)
   
   ## Starting values correlation (if given)
-  corrxy.T <- corrxz.T <- 2/3
+  corrxy.T <- corrxz.T <- 1/4
   if(!is.null(theta)){
     corrxy.T <- max(c(abs(theta[1])/(1-abs(theta[1])),1e-4))
     corrxz.T <- max(c(abs(theta[2])/(1-abs(theta[2])),1e-4))
@@ -75,9 +84,18 @@ CDSCR <- function(x.data,y.data,delta.data,knots.t=NULL,knots.y=NULL,knots.z=NUL
   
   ## Starting values
   par<-c(log(c(naive_est_x,naive.y,naive.z,corrxy.T,corrxz.T)))
-
+  
   ## Running optimization
-  like_opt <-stats::optim(par,like_CDSCR_2corr,x.data=x.data,y.data=y.data,z.data=z.data,delta.data=delta.data,knots.x=knots.t,knots.y=knots.y,knots.z=knots.z,nodes=nodes,weights=weights,hessian = FALSE,control = list(maxit=10000),method = opt_meth)
+  ## Optimization for grouped data, which uses full adaptive quadrature for the denominator (used in the data analysis).
+  if(any(x.data==0) | all(is.integer(x.data))){
+    cat("Grouped version running. \n")
+    like_opt <-stats::optim(par,like_CDSCR_2corr_grp,x.data=x.data,y.data=y.data,z.data=z.data,delta.data=delta.data,knots.x=knots.t,knots.y=knots.y,knots.z=knots.z,nodes=nodes,weights=weights,hessian = FALSE,control = list(maxit=10000),method = opt_meth)
+  }
+  ## Optimization for continuous data, which uses a mixed quadrature approach for the denominator (used in the simulations).
+  if(!(any(x.data==0) | all(is.integer(x.data)))){
+    cat("Continuous version running. \n")
+    like_opt <-stats::optim(par,like_CDSCR_2corr,x.data=x.data,y.data=y.data,z.data=z.data,delta.data=delta.data,knots.x=knots.t,knots.y=knots.y,knots.z=knots.z,nodes=nodes,weights=weights,hessian = FALSE,control = list(maxit=10000),method = opt_meth)
+  }
   
   res <- list(like_opt = like_opt,knots.t=knots.t,knots.y=knots.y,knots.z=knots.z,st_vals=par)
   return(res)
@@ -414,6 +432,7 @@ density.T.given.Y <- function(x,y,r,knots.x,alpha.x,knots.y,alpha.y){
   ans1
 }
 
+
 surv.Z.given.T <- function(z,x,corrxz,knots.x,alpha.x,knots.z,alpha.z){
   F_bar_z <- PC_surv(z,knots.z,alpha.z)
   F_bar_x <- PC_surv(x,knots.x,alpha.x)
@@ -444,12 +463,12 @@ expect.min.T.Y<-function(r,knots.x,alpha.x,knots.y,alpha.y){
 }
 
 
-#### The functions is to calculate the inner part of the integration in the denominator ####
-
-expect.z.given.t<-function(x,r,knots.x,alpha.x,knots.z,alpha.z){
-  integrate(surv.Z.given.T,0,Inf,x,r,knots.x,alpha.x,knots.z,alpha.z)$value
+expect.min.T.Y_grp<-function(r,knots.x,alpha.x,knots.y,alpha.y){
+  integrate(surv.min.T.Y,1,Inf,r,knots.x,alpha.x,knots.y,alpha.y)$value +1
 }
 
+
+#### The functions is to calculate the inner part of the integration in the denominator ####
 
 denom.integral.inner.legendre<-function(x,corrxy,corrxz,knots.x,alpha.x,knots.y,alpha.y,knots.z,alpha.z,nodes,weights)
 {
@@ -464,7 +483,11 @@ denom.integral.inner.legendre<-function(x,corrxy,corrxz,knots.x,alpha.x,knots.y,
   t1 
 }
 
-
+denom.integral.inner<-function(x,corrxy,corrxz,knots.x,alpha.x,knots.y,alpha.y,knots.z,alpha.z)
+{
+  (sapply(x,function(x,corrxz,knots.x,alpha.x,knots.z,alpha.z){integrate(surv.Z.given.T,1,Inf,x,corrxz,knots.x,alpha.x,knots.z,alpha.z)$value},corrxz,knots.x,alpha.x,knots.z,alpha.z)+1)*cdf.Y.given.T(x,corrxy,knots.x,alpha.x,knots.y,alpha.y)*PC_pdf(x,knots.x,alpha.x)
+  
+}
 
 #### The functions is to calculate the inner part of the integration in the numerator ####
 
@@ -481,9 +504,26 @@ nume.integral.inner.legendre<-function(temp.data,nodes,corrxy,corrxz,knots.x,alp
   return(ans_mat)
 }
 
+nume.integral.inner.legendre_grp <-function(temp.data,nodes,corrxy,corrxz,knots.x,alpha.x,knots.y,alpha.y,knots.z,alpha.z){
+  N <- dim(temp.data)[1]
+  n <- length(nodes)
+  trans_nodes <- (nodes+1)/(1-nodes)
+  dp <- 1/(1-nodes)*(1+trans_nodes)
+  x <- rep(trans_nodes,N)+rep(temp.data[,1],each=n)
+  y <- rep(temp.data[,1],each=n)
+  z <- rep(temp.data[,2],each=n)
+  ans<-surv.Z.given.T(z,x,corrxz,knots.x,alpha.x,knots.z,alpha.z)*density.T.given.Y(x,y,corrxy,knots.x,alpha.x,knots.y,alpha.y)*(PC_surv(y-1,knots.y,alpha.y)-PC_surv(y,knots.y,alpha.y))*dp
+  ans[y==0] <- 0
+  ans[x==0] <- 0
+  ans_mat <- matrix(ans,nrow=N,ncol=n,byrow = TRUE)
+  return(ans_mat)
+}
+
+
 
 #### Likelihood Functions ####
 
+# Quicker version for continuous data
 like_CDSCR_2corr <-function(par,x.data,y.data,z.data,delta.data,knots.x,knots.y,knots.z,nodes,weights){
   Ppar <<- par
   par <- exp(par)
@@ -524,6 +564,62 @@ like_CDSCR_2corr <-function(par,x.data,y.data,z.data,delta.data,knots.x,knots.y,
 }
 
 
+# Slower version for grouped data. 
+like_CDSCR_2corr_grp <-function(par,x.data,y.data,z.data,delta.data,knots.x,knots.y,knots.z,nodes,weights){
+  
+  Ppar <<- par
+  par <- exp(par)
+  nsll <- Inf
+  if(all(is.finite(par))){
+    t_alpha.x <- par[1:(length(knots.x)+1)]
+    t_alpha.y <- par[(length(knots.x)+2):(length(knots.x)+length(knots.y)+2)]
+    t_alpha.z <- par[(length(knots.x)+length(knots.y)+3):(length(knots.x)+length(knots.y)+length(knots.z)+3)]
+    corrxy <- 1*(sign(par[length(par)-1]))
+    corrxz <- 1*(sign(par[length(par)]))
+    if(is.finite(par[length(par)-1])) corrxy <- -(par[length(par)-1]/(1+par[length(par)-1]))
+    if(is.finite(par[length(par)])) corrxz <- (par[length(par)]/(1+par[length(par)]))
+    
+    N <- length(x.data)
+    numerator <- rep(0,N)
+    
+    numerator1<-surv.min.T.Y(x.data[delta.data==0],corrxy,knots.x,t_alpha.x,knots.y,t_alpha.y)
+    
+    temp.data<-cbind(y.data[delta.data==1],z.data[delta.data==1])
+    ans_mat <- nume.integral.inner.legendre_grp(temp.data,nodes,corrxy=corrxy,corrxz=corrxz,knots.x=knots.x,alpha.x=t_alpha.x,knots.y=knots.y,alpha.y=t_alpha.y,knots.z=knots.z,alpha.z=t_alpha.z) 
+    numerator2 <- t(t(weights)%*%t(ans_mat))
+    
+    numerator[delta.data==0] <- numerator1
+    numerator[delta.data==1] <- numerator2
+    
+    t1 <- try(ETminY <- expect.min.T.Y_grp(r=corrxy,knots.x=knots.x,alpha.x=t_alpha.x,knots.y=knots.y,alpha.y=t_alpha.y),silent = TRUE)
+    if(!is.null(attr(t1,"class"))){ETminY <- Inf}
+    
+    t1 <- try(EZgiven <- integrate(denom.integral.inner,0,Inf,corrxy,corrxz,knots.x,t_alpha.x,knots.y,t_alpha.y,knots.z,t_alpha.z)$value,silent = TRUE)
+    
+    if(!is.null(attr(t1,"class"))){
+      Sigma <- diag(3)
+      Sigma[1,2] <- Sigma[2,1] <- corrxy
+      Sigma[1,3] <- Sigma[3,1] <- corrxz
+      Sigma[2,3] <- Sigma[3,2] <- corrxy*corrxz
+      u <- mvrnorm(n=1e6, mu=c(0,0,0), Sigma=Sigma)
+      X_vals <- ceiling(gen_func(pnorm(u[,1]),knots.x,t_alpha.x))
+      Y_vals <- ceiling(gen_func(pnorm(u[,2]),knots.y,t_alpha.y))
+      Z_vals <- ceiling(gen_func(pnorm(u[,3]),knots.z,t_alpha.z))
+      EZgiven <- mean(Z_vals*I(Y_vals<X_vals))
+      ETminY <- mean(apply(cbind(X_vals,Y_vals),1,min))
+    }
+    denominator <- Inf
+    if(is.finite(ETminY) & is.finite(EZgiven)){denominator <- ETminY + EZgiven}
+    
+    likelihood1<-numerator/denominator
+    log.likelihood1<-log(likelihood1)
+    log.likelihood1[is.infinite(log.likelihood1)]<-0
+    log.likelihood1[log.likelihood1==0]<--1000
+    nsll <- sum(-log.likelihood1)
+  }
+  return(nsll)
+}
+
 
 unique_knots <- function(knots){
   knots_fl <- floor(knots)
@@ -558,6 +654,23 @@ hazard_guess_ecdf <- function(ecdf,surv_dat,knots){
   return(y_haz)
 }
 
+
+gen_func <- function(u,knots,alpha){
+  w <- -log(1-u)
+  L_int <- knots - c(0,knots[-length(knots)])
+  Int <- cumsum(alpha[-length(alpha)]*L_int)
+  Uts = I(w<=Int[1])*(w/alpha[1]) 
+  k = 1
+  if(length(knots)>1){
+    for(k in 2:length(knots)){
+      Inc <- ((w-Int[k-1])/alpha[k] +knots[k-1])
+      Uts = Uts + I(w <= Int[k] & w > Int[k-1])*Inc
+    }
+  }
+  Inc <- ((w-Int[k])/alpha[length(alpha)] +knots[k])
+  Uts = Uts + I(w > Int[length(knots)])*Inc
+  return(Uts)
+}
 
 
 
