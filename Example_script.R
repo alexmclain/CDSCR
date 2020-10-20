@@ -6,6 +6,7 @@
 # For more information see the description in the "Programs_CDSCR.R" file.
 
 
+
 #### Load the programs
 source("CDSCR_programs.R")
 
@@ -16,7 +17,7 @@ ex_data <- read.csv("CDSCR_data.csv")
 # Total current duration time
 x.data <- ex_data$T 
 # Time to intermittent event 
-y.data <- ex_data$TTF 
+y.data <- ex_data$TTFT 
 # Indicator that intermittent event occured.
 delta.data <- ex_data$fail_ind 
 
@@ -92,7 +93,7 @@ ex_data <- read.csv("CDSCR_data_grp.csv")
 # Total current duration time
 x.data <- ex_data$T 
 # Time to intermittent event 
-y.data <- ex_data$TTF 
+y.data <- ex_data$TTFT 
 # Indicator that intermittent event occured.
 delta.data <- ex_data$fail_ind 
 

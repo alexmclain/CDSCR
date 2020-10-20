@@ -5,7 +5,6 @@ library(survival)
 
 
 #### Wrapper to the optimization of the likelihood ####
-
 CDSCR <- function(x.data,y.data,delta.data,knots.t=NULL,knots.y=NULL,knots.z=NULL,K1=NULL,K2=NULL,K3=NULL,B=20,theta=NULL,opt_meth="Nelder-Mead"){
   
   ##################################################################################################
