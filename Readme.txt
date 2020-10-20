@@ -4,4 +4,4 @@ https://www.cdc.gov/nchs/nsfg/nsfg_questionnaires.htm
 
 In the paper, cycle 6 through the 2015-2017 data is analyzed (we cannot post NSFG data on this website, but it is all publically available).
 
-McLain, A.C., S. Guo, M.E. Thoma, and J. Zhang (2020). Cross-sectional length biased semi-competing risks data. Under revision for the Annals of Applied Statistics.
+McLain, A.C., S. Guo, M.E. Thoma, and J. Zhang (2020). Cross-sectional length biased semi-competing risks data. Submitted to the Annals of Applied Statistics.
