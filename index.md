@@ -176,6 +176,7 @@ lines(t_vec,Surv_Z_est,col=3,lwd=3)
 lines(t_vec,Min_TY_est,col=4,lwd=3)
 lines(t_vec,Surv_T_naive(t_vec),col=1,lwd=3,lty=2)
 legend("topright",legend = c("Survival of T","Survival of Y","Survival of Z","Survival of min(T,Y)","Survival of T (naive)"),lwd=3,col=c(1:4,1),lty=c(rep(1,4),2))
+```
 
 Table of selected values 
 
@@ -184,6 +185,8 @@ t_want <- c(3,6,12,24,36)
 surv_res <- data.frame(time=t_want,Est_surv_T=Surv_T_est[t_vec %in% t_want],Naive_surv_T=Surv_T_naive(t_want),Est_surv_Y=Surv_Y_est[t_vec %in% t_want],Est_surv_Z=Surv_Z_est[t_vec %in% t_want],Est_surv_minTY=Min_TY_est[t_vec %in% t_want])
 surv_res
 ```
+
+McLain A. C., R. Sundaram, M. E. Thoma, and G. M. Buck Louis (2014).  [Semiparametric modeling of grouped current duration data with preferential reporting](http://onlinelibrary.wiley.com/doi/10.1002/sim.6216/full). _Statistics in Medicine_, 33 (23), 3961--3972
 
 
 
