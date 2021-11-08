@@ -184,5 +184,6 @@ surv_res <- data.frame(time=t_want,Est_surv_T=Surv_T_est[t_vec %in% t_want],Naiv
 surv_res
 ```
 
+McLain A. C., R. Sundaram, M. E. Thoma, and G. M. Buck Louis (2014).  [Semiparametric modeling of grouped current duration data with preferential reporting](http://onlinelibrary.wiley.com/doi/10.1002/sim.6216/full). _Statistics in Medicine_, 33 (23), 3961--3972
 
 
