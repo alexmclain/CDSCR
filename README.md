@@ -175,6 +175,7 @@ lines(t_vec,Surv_Z_est,col=3,lwd=3)
 lines(t_vec,Min_TY_est,col=4,lwd=3)
 lines(t_vec,Surv_T_naive(t_vec),col=1,lwd=3,lty=2)
 legend("topright",legend = c("Survival of T","Survival of Y","Survival of Z","Survival of min(T,Y)","Survival of T (naive)"),lwd=3,col=c(1:4,1),lty=c(rep(1,4),2))
+```
 
 Table of selected values 
 
